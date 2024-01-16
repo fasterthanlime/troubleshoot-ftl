@@ -7,13 +7,25 @@ dig fasterthanli.me +short
 IFS=$'\n' read -r -d '' -a nodes < <(dig +short +trace fasterthanli.me CNAME | grep CNAME | cut -d ' ' -f 2 | sed 's/[.]$//g')
 curl_format="conn %{time_connect}s | appconn %{time_appconnect}s | pretrans %{time_pretransfer}s | starttrans %{time_starttransfer}s | total: %{time_total}s"
 
+# find whether to use ping6 or ping -6
+# if the output of `ping --help 2>&1` contains `-6` then use `ping -6`
+if [[ $(ping --help 2>&1) =~ "-6" ]]; then
+    echo "ping supports -6"
+    ping4="ping -4"
+    ping6="ping -6"
+else
+    echo "ping does not support -6"
+    ping4="ping"
+    ping6="ping6"
+fi
+
 for node in ${nodes[@]}; do
     for ip in -4 -6; do
         echo
         if [ $ip == -6 ]; then
-            ping6 -c 1 $node | head -2
+            ${ping6} -c 1 $node | head -2
         else
-            ping -c 1 $node | head -2
+            ${ping4} -c 1 $node | head -2
         fi
         curl $ip \
             --write-out "${curl_format}" \
