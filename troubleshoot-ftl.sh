@@ -5,22 +5,15 @@ echo "fasterthanli.me resolves to: "
 dig fasterthanli.me +short
 
 IFS=$'\n' read -r -d '' -a nodes < <(dig +short +trace fasterthanli.me CNAME | grep CNAME | cut -d ' ' -f 2 | sed 's/[.]$//g')
-read -d '\n' curl_format << EOF
-        time_connect:  %{time_connect}s
-     time_appconnect:  %{time_appconnect}s
-    time_pretransfer:  %{time_pretransfer}s
-  time_starttransfer:  %{time_starttransfer}s
-                       --------------------------
-          time_total:  %{time_total}s
-EOF
+curl_format="conn %{time_connect}s | appconn %{time_appconnect}s | pretrans %{time_pretransfer}s | starttrans %{time_starttransfer}s | total: %{time_total}s"
 
 for node in ${nodes[@]}; do
     for ip in -4 -6; do
-        echo; echo "============== $node $ip =============="  
+        echo
         if [ $ip == -6 ]; then
-            ping6 -c 1 $node
+            ping6 -c 1 $node | head -2
         else
-            ping -c 1 $node
+            ping -c 1 $node | head -2
         fi
         curl $ip \
             --write-out "${curl_format}" \
@@ -31,7 +24,10 @@ for node in ${nodes[@]}; do
             --connect-to fasterthanli.me:443:$node:443 \
             "https://fasterthanli.me"
         curl_exit_code=$?
+        echo
         # if curl exit code isn't 0 print something in red
-        [ $curl_exit_code -ne 0 ] && printf "\e[31mCurl failed\e[0m\n"
+        if [ $curl_exit_code -ne 0 ]; then
+            printf "\e[31m❌ curl failed for $node $ip\e[0m\n"
+        fi
     done
 done
