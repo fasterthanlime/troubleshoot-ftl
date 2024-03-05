@@ -4,7 +4,8 @@ set -u
 echo "fasterthanli.me resolves to: "
 dig fasterthanli.me +short
 
-IFS=$'\n' read -r -d '' -a nodes < <(dig +short +trace fasterthanli.me CNAME | grep CNAME | cut -d ' ' -f 2 | sed 's/[.]$//g')
+IFS=$',' read -r -d '' -a nodes < <(dig +short _servers.bearcove.cloud TXT | tr -d '"')
+echo "Found ${#nodes[@]} nodes through TXT"
 curl_format="conn %{time_connect}s | appconn %{time_appconnect}s | pretrans %{time_pretransfer}s | starttrans %{time_starttransfer}s | total: %{time_total}s"
 
 # find whether to use ping6 or ping -6
@@ -20,12 +21,13 @@ else
 fi
 
 for node in ${nodes[@]}; do
+    host="${node}.bearcove.cloud"
     for ip in -4 -6; do
         echo
         if [ $ip == -6 ]; then
-            ${ping6} -c 1 $node | head -2
+            ${ping6} -c 1 $host | head -2
         else
-            ${ping4} -c 1 $node | head -2
+            ${ping4} -c 1 $host | head -2
         fi
         curl $ip \
             --write-out "${curl_format}" \
@@ -33,7 +35,7 @@ for node in ${nodes[@]}; do
             --output /dev/null \
             --fail \
             --connect-timeout 3 \
-            --connect-to fasterthanli.me:443:$node:443 \
+            --connect-to fasterthanli.me:443:$host:443 \
             "https://fasterthanli.me"
         curl_exit_code=$?
         echo
