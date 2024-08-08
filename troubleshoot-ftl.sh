@@ -21,6 +21,10 @@ else
 fi
 
 for node in ${nodes[@]}; do
+    if [[ "$node" == "djin" ]]; then
+        continue
+    fi
+
     host="${node}.bearcove.cloud"
     for ip in -4 -6; do
         echo
@@ -32,11 +36,10 @@ for node in ${nodes[@]}; do
         curl $ip \
             --write-out "${curl_format}" \
             --silent \
-            --output /dev/null \
             --fail \
             --connect-timeout 3 \
             --connect-to fasterthanli.me:443:$host:443 \
-            "https://fasterthanli.me"
+            "https://fasterthanli.me/api/sponsors"
         curl_exit_code=$?
         echo
         # if curl exit code isn't 0 print something in red
